@@ -17,9 +17,9 @@
 
 #include "symlookup.h"
 
-#ifndef strtoull
+#if defined(_MSC_VER)
 #	define strtoull _strtoui64
-#endif // strtoull
+#endif // defined(_MSC_VER)
 
 typedef std::map<std::string, uint16_t> FileMap;
 FileMap g_fileMap;
@@ -66,7 +66,7 @@ void linearizeSymbols_r(uint32_t _start, uint32_t _end)
 		g_symbolNodes.push_back(node);
 		g_symbolNames.push_back(symbol.name);
 		
-		g_nameOffset += symbol.name.size()+1;
+		g_nameOffset += (uint32_t)symbol.name.size()+1;
 		
 		linearizeSymbols_r(_start, index);
 		linearizeSymbols_r(index+1, _end);
@@ -76,7 +76,7 @@ void linearizeSymbols_r(uint32_t _start, uint32_t _end)
 void linearizeSymbols()
 {
 	g_nameOffset = 0;
-	linearizeSymbols_r(0, g_symbols.size() );
+	linearizeSymbols_r(0, (uint32_t)g_symbols.size() );
 }
 
 void saveSymbols(const char* _filePath)
@@ -93,10 +93,10 @@ void saveSymbols(const char* _filePath)
 
 #define UNDNAME_NAME_ONLY 0x1000
 typedef const char* PCTSTR;
-DWORD __stdcall dummyUnDecorateSymbolName(PCTSTR DecoratedName, PTSTR UnDecoratedName, DWORD UndecoratedLength, DWORD Flags)
+DWORD __stdcall dummyUnDecorateSymbolName(PCTSTR DecoratedName, PTSTR UnDecoratedName, DWORD UndecoratedLength, DWORD /*Flags*/)
 {
 	strncpy(UnDecoratedName, DecoratedName, UndecoratedLength);
-	return strlen(UnDecoratedName);
+	return (DWORD)strlen(UnDecoratedName);
 }
 
 typedef DWORD (__stdcall *UnDecorateSymbolNameFn)(PCTSTR DecoratedName, PTSTR UnDecoratedName, DWORD UndecoratedLength, DWORD Flags);
@@ -135,7 +135,7 @@ void loadMsvcMapfile(const char* _filePath)
 				else
 				{
 					char buffer[4096];
-					uint32_t size = sizeof(buffer);
+					size_t size = sizeof(buffer);
 					char* argv[50];
 					int argc = tokenizeCommandLine(args, buffer, size, argv, 50);
 					
@@ -231,7 +231,7 @@ void loadGccMapfile(const char* _filePath)
 							{
 								lineNumber[0] = '\0';
 								++lineNumber;
-								line = atoi(lineNumber);
+								line = (uint16_t)atoi(lineNumber);
 							}
 							
 							fileName = tok;
@@ -239,7 +239,7 @@ void loadGccMapfile(const char* _filePath)
 							FileMap::iterator it = g_fileMap.find(fileName);
 							if (it == g_fileMap.end() )
 							{
-								file = g_fileMap.size()+1;
+								file = (uint16_t)g_fileMap.size()+1;
 								g_fileMap.insert(std::make_pair(fileName, file) );
 							}
 							else
@@ -345,10 +345,10 @@ int main(int _argc, const char** _argv)
 		
 		FILE* out = fopen(outFilePath, "wb");
 		
-		uint32_t numSymbols = g_symbolNodes.size();
+		uint32_t numSymbols = (uint32_t)g_symbolNodes.size();
 		fwrite(&numSymbols, 4, 1, out);
 
-		uint16_t numFiles = files.size();
+		uint16_t numFiles = (uint16_t)files.size();
 		fwrite(&numFiles, 2, 1, out);
 
 		uint32_t dummy = 0;
@@ -374,7 +374,7 @@ int main(int _argc, const char** _argv)
 		foreach (const std::string& name, files)
 		{
 			fwrite(&fileOffset, 4, 1, out);
-			fileOffset += name.size()+1;
+			fileOffset += (uint32_t)(name.size()+1);
 		}
 
 		patch(out, namesOffset);

@@ -13,7 +13,7 @@ nm binutils tool.
 
 	nm --demangle --numeric-sort --line-numbers <executable> > <mapfile>
 
-	or short form:
+or short form:
 
 	nm -Cnl <executable> > <mapfile>
 
